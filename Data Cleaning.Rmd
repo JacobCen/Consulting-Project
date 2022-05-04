@@ -1,0 +1,118 @@
+---
+title: "Consulting Project"
+output: html_document
+date: '2022-04-06'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(arsenal)
+library(data.table)
+library(tidyselect)
+library(tidyverse)
+library(stringr)
+```
+
+read data
+```{r}
+df<-read.csv("consulting project.csv",heade=TRUE)
+```   
+
+```{r}
+# tmp<-df %>% mutate_all(all_vars(. %in% c(802.6,802.7)))
+# df[apply(tmp,1,sum)>0,] %>% View()
+```
+
+Select data include S02.85, S02.3X, S02.12X, S02.84, S02.83，802.6 and 802.7
+```{r}
+# Select relevant diagnosis code
+diagnosistar<-c('S02.85', 'S02.3', 'S02.12', 'S02.84', 'S02.83','802.6','802.7')
+get_candi<-function(target,df){
+  tmp=startsWith(c(as.matrix(df)), target)
+  #col_name=colnames(df)
+  tmp2=data.frame(matrix(tmp,ncol=369))
+  tmp_index=apply(tmp2,1,sum,na.rm = T)>0
+  re=df[tmp_index,]
+  return(re)
+}
+l=lapply(diagnosistar,get_candi,df=df)
+
+Onlywithdiagnosis_data<-bind_rows(l)
+Onlywithdiagnosis_data_final<-distinct(Onlywithdiagnosis_data) 
+
+# select relevant procedure code
+proceduretar<-c('"16.0"', "16.01", '16.09', '16.8', '16.81', '16.89','0N5P', '0N5Q', '0N8P', '0N8Q', '0N9P', '0N9Q', '0NBP', '0NBQ', '0NCP', '0NCQ', '0NDP', '0NDQ', '0NHP', '0NHQ', '0NNP', '0NNQ', '0NQP', '0NQN', '0NRP', '0NRQ', '0NSP', '0NSQ', '0NTP', '0NTQ', '0NUP', '0NUQ')
+# H<-lapply(proceduretar ,get_candi, df = df)
+# Onlywithprocedure_data<-bind_rows(H)
+
+onlywithprocedure_final<-distinct(Onlywithprocedure_data)
+
+w=lapply(proceduretar,get_candi,df=Onlywithdiagnosis_data_final)
+Bothdiagnosis_and_procedure <-distinct(bind_rows(w)) 
+
+# Conditinal probability
+nrow(Bothdiagnosis_and_procedure)/nrow(Onlywithdiagnosis_data_final)
+
+# Contingency Table
+
+# count(final_data,)
+# t(final_data)
+# final_data %>% select(ICD9.diagnosis.codes.1:ICD9.diagnosis.codes.2) %>% as.character()
+# final_data %>% distinct() %>%  pivot_longer(ICD9.diagnosis.codes.1:ICD10.diagnosis.codes.33,names_to ='surgery',values_to = 'value')
+# final_data %>% select(ICD9.diagnosis.codes.1:ICD9.diagnosis.codes.2) %>% pivot_longer(ICD9.diagnosis.codes.1:ICD9.diagnosis.codes.2,names_to = 'surgery',values_to = 'value')
+# 
+# who %>% pivot_longer(
+#   cols = new_sp_m014:newrel_f65,
+#   names_to = c("diagnosis", "gender", "age"),
+#   names_pattern = "new_?(.*)_(.)(.*)",
+#   values_to = "count"
+# )
+# 
+# billboard %>%
+#   pivot_longer(
+#     cols = starts_with("wk"),
+#     names_to = "week",
+#     names_prefix = "wk",
+#     values_to = "rank",
+#     values_drop_na = TRUE
+#   )
+# 
+# fifinal_data<-na.omit(c(as.matrix(distinct(final_data) %>% select(ICD9.diagnosis.codes.1:ICD10.diagnosis.codes.33)))) %>% data.frame() 
+# colnames(fifinal_data)<-'value'
+# write.csv(fifinal_data%>% count(value),'final_data.csv')
+# getwd()
+```
+
+```{r}
+# DF= data.frame()
+# seperate<-for (i in tar){
+#     re=get_candi(i,df)
+#     print(re)
+#     rbind(DF,re)
+# }
+```
+
+EDA Part
+
+nunmber of patient of different diagnosis code(condition) barplot
+
+```{r}
+# ICDCode<-tar
+# num<-c(8,31,10,4,4,2,0)
+Numdf<-data.frame(ICDCode,num)
+ggplot(Numdf, aes(x = ICDCode, y = num, fill = ICDCode))+
+  geom_bar(stat="identity")+
+  labs(x = 'ICD Code', y= "Number of Cases", axis=100)+
+  geom_text(aes(label=num), vjust=1.6, color="black", size=3)
+```
+
+
+Barplot for Sexual
+```{r}
+ggplot(final_data, aes(x = Gender, fill = Gender))+
+  geom_bar(stat="count")
+```
+```{r}
+
+```
+

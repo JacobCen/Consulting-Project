@@ -1,0 +1,131 @@
+---
+title: "Instructon"
+author: "Consulting Group"
+date: '2022-05-03'
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE)
+library(arsenal)
+library(data.table)
+library(tidyselect)
+library(tidyverse)
+library(stringr)
+library(BSDA)
+```
+
+# Import the target dara
+```{r}
+# Get the data
+df<-read.csv("consulting project.csv",header=TRUE)
+```
+
+# Get the target diagnosis code and target procedure code
+```{r}
+diagnosistar<-c('S02.85', 'S02.3', 'S02.12', 'S02.84', 'S02.83','802.6','802.7') 
+
+proceduretar<-c('"16.0"', "16.01", '16.09', '16.8', '16.81', '16.89','0N5P', '0N5Q',        
+                '0N8P', '0N8Q', '0N9P', '0N9Q', '0NBP', '0NBQ', '0NCP', '0NCQ', '0NDP', 
+                '0NDQ', '0NHP', '0NHQ', '0NNP', '0NNQ', '0NQP', '0NQN', '0NRP', '0NRQ',
+                '0NSP', '0NSQ', '0NTP', '0NTQ', '0NUP', '0NUQ')
+```
+
+# Create the function
+```{r}
+## Function for finding data with specific target code
+get_candi<-function(target,df){                     
+  tmp=startsWith(c(as.matrix(df)),target) # Use StartsWith function to detect all the observation with target code
+  tmp2=data.frame(matrix(tmp,ncol=369))  # Transfer the result from previous step to data.frame
+  tmp_index=apply(tmp2,1,sum,na.rm = T)>0 # Find which observation content target code and set them to TRUE index
+  re=df[tmp_index,] # Get all patient with TRUE index
+  return(re) # Return the result
+}
+```
+
+
+# Get the number of patient with specific condition
+## Get the total number of patient
+```{r}
+Num_of_patient<-nrow(df)
+Num_of_patient
+```
+
+## Get the number for patient with target diagnosis code
+```{r}
+l<-lapply(diagnosistar,get_candi,df=df)
+Onlywithdiagnosis<-distinct(bind_rows(l)) 
+Num_of_patients_with_diagnosis<-nrow(Onlywithdiagnosis)
+Num_of_patients_with_diagnosis
+```
+
+## Get the number for patient with both target diagnosis code and procedure code
+```{r}
+w<-lapply(proceduretar,get_candi,df=Onlywithdiagnosis)
+Bothdiagnosis_and_procedure <-distinct(bind_rows(w)) 
+Num_of_patients_with_diagnosis_and_procedure<-nrow(Bothdiagnosis_and_procedure)
+Num_of_patients_with_diagnosis_and_procedure
+```
+
+## Get the number of patient with target procedure code
+```{r}
+v<-lapply(proceduretar,get_candi,df=df)
+Onlywithprocedure<-distinct(bind_rows(v)) 
+Num_of_patients_with_procedure<-nrow(Onlywithprocedure)
+Num_of_patients_with_procedure
+```
+
+## Get the number of patient with target procedure code but no target diagnosis code
+```{r}
+Num_of_patient_with_procedure_no_daignosis<-Num_of_patients_with_procedure-Num_of_patients_with_diagnosis_and_procedure
+Num_of_patient_with_procedure_no_daignosis
+```
+
+## Get the number of patient with target diagnosis but not target procedure
+```{r}
+Num_of_patient_with_diagnosis_no_procedure<-Num_of_patients_with_diagnosis-Num_of_patients_with_diagnosis_and_procedure
+Num_of_patient_with_diagnosis_no_procedure
+```
+
+## Get the number of patient with no target diagnosis
+```{r}
+Num_of_patient_with_no_target_diagnosis<-Num_of_patient-Num_of_patients_with_diagnosis
+Num_of_patient_with_no_target_diagnosis
+```
+
+## Get the number of patient with no target diagnosis and no target procedure
+```{r}
+Num_of_patient_with_no_target_diagnosis_no_procedure<-Num_of_patient_with_no_target_diagnosis-Num_of_patient_with_procedure_no_daignosis
+Num_of_patient_with_no_target_diagnosis_no_procedure
+```
+
+## Get the number of patient with no target procedure
+```{r}
+Num_of_patient_with_no_procedure<-Num_of_patient-Num_of_patients_with_procedure
+Num_of_patient_with_no_procedure
+```
+
+# Create contingency table 
+```{r}
+data.frame('With target procedure' = c(2,5,7),
+           'With no target procedure' = c(53,258,311),
+           'total '=c(55,263,318),row.names = c('With target diagnosis',
+                                                'With no target diagnosis','total'))
+```
+
+# Conditional Probability
+```{r}
+prob<-2/55
+prob
+```
+
+# Z-test part
+We want to test if the population proportion (true proportion of orbital fracture patients who need surgery) is greater than a threshold 5%.
+For here$\beta_{0} = 0.05$ and $\beta_{1} > 0.05$
+```{r}
+ztest<-prop.test(2, 55, p = 0.05, alternative = "greater", conf.level = 0.95, correct = TRUE)
+ztest$p.value
+```
+Because 0.56146 > 0.05, so we can say this test is not significant, so cannot reject the null hypothesis.
